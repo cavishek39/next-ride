@@ -22,8 +22,6 @@ import {
 } from '@/services/LocationService'
 import { NavigationService } from '@/services/NavigationService'
 
-const { width, height } = Dimensions.get('window')
-
 export interface MapComponentProps {
   // Map mode - determines the functionality
   mode: 'booking' | 'tracking' | 'driver_dashboard' | 'navigation'

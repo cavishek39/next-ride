@@ -38,10 +38,6 @@ export default function RootLayout() {
                 options={{ headerShown: false }}
               />
               <Stack.Screen
-                name='(routes)/onboarding'
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
                 name='(routes)/onboarding/index'
                 options={{ headerShown: false }}
               />

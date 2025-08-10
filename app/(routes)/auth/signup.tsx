@@ -12,6 +12,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import AuthService from '@/services/AuthService'
@@ -22,6 +23,7 @@ const { width, height } = Dimensions.get('window')
 const SignupScreen = () => {
   const params = useLocalSearchParams<{ role: UserRole }>()
   const userRole = params.role || 'customer'
+  const insets = useSafeAreaInsets()
 
   // Basic user info
   const [firstName, setFirstName] = useState('')
@@ -114,6 +116,7 @@ const SignupScreen = () => {
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred')
+      console.log('Error during signup:', error)
     } finally {
       setIsLoading(false)
     }
@@ -155,7 +158,8 @@ const SignupScreen = () => {
         style={styles.keyboardView}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'>
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -379,26 +383,30 @@ const SignupScreen = () => {
                 </TouchableOpacity>
               </View>
             </View>
-
-            {/* Sign Up Button */}
-            <TouchableOpacity
-              style={[styles.signupButton, isLoading && styles.disabledButton]}
-              onPress={handleSignup}
-              disabled={isLoading}>
-              <Text style={styles.signupButtonText}>
-                {isLoading ? 'Creating Account...' : 'Create Account'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Login Link */}
-            <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity onPress={navigateToLogin}>
-                <Text style={styles.loginLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </ScrollView>
+        {/* Footer actions always visible */}
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: insets.bottom + 12 },
+            isLoading && { opacity: 0.9 },
+          ]}>
+          <TouchableOpacity
+            style={[styles.signupButton, isLoading && styles.disabledButton]}
+            onPress={handleSignup}
+            disabled={isLoading}>
+            <Text style={styles.signupButtonText}>
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity onPress={navigateToLogin}>
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
@@ -414,7 +422,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     paddingTop: 20,
     paddingBottom: 30,
   },
@@ -424,7 +432,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    left: 0,
+    left: -10,
     top: 0,
     padding: 5,
   },
@@ -545,6 +553,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '500',
+  },
+  footer: {
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    gap: 8,
   },
 })
 

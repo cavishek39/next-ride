@@ -21,14 +21,13 @@ const SplashScreen = () => {
   const checkAppStatus = async () => {
     try {
       // Simulate a short loading time
-      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       // Check if user is authenticated
       const isAuthenticated = await AuthService.isAuthenticated()
 
       if (isAuthenticated) {
-        // User is logged in, go to main app
-        router.replace('/(tabs)')
+        // User is logged in, go to main app or last intended page
+        router.replace('/(tabs)' as any)
         return
       }
 

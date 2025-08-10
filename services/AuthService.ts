@@ -171,6 +171,8 @@ export const AuthService = {
 
       const profileCreated = await UserService.createUserProfile(profileData)
 
+      console.log('User profile created:', profileCreated)
+
       if (!profileCreated) {
         throw new Error('Failed to create user profile')
       }

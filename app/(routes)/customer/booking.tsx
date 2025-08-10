@@ -5,11 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Dimensions,
   Alert,
   Modal,
-  FlatList,
-  TextInput,
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -17,8 +14,6 @@ import MapComponent from '@/components/MapComponent'
 import { LocationService, LocationDetails } from '@/services/LocationService'
 import { RideService } from '@/services/RideService'
 import AuthService from '@/services/AuthService'
-
-const { width, height } = Dimensions.get('window')
 
 const CustomerBookingScreen = () => {
   const [pickupLocation, setPickupLocation] = useState<LocationDetails | null>(

@@ -17,6 +17,7 @@ export default function HomeScreen() {
       const isAuth = await AuthService.isAuthenticated()
       if (isAuth) {
         const role = await AuthService.getUserRole()
+        console.log('User role:', role)
         setIsLoggedIn(true)
         setUserRole(role)
       }

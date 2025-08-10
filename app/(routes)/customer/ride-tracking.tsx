@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   LocationCoordinates,
 } from '@/services/LocationService'
 import { RideService } from '@/services/RideService'
+import { UserService } from '@/services/UserService'
 import { Ride, RideStatus } from '@/types'
 
 const RideTrackingScreen = () => {
@@ -27,16 +28,51 @@ const RideTrackingScreen = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [estimatedArrival, setEstimatedArrival] = useState<number>(0)
+  const pollingRef = useRef<NodeJS.Timeout | number | null>(null)
+  const [isCentering, setIsCentering] = useState(false)
 
   useEffect(() => {
     if (params.rideId) {
       loadRideDetails()
-      // Set up real-time updates (you can implement WebSocket or Firestore listeners here)
-      const interval = setInterval(loadRideDetails, 5000) // Update every 5 seconds
-
-      return () => clearInterval(interval)
+      const rideInterval = setInterval(loadRideDetails, 8000) // ride doc refresh
+      return () => clearInterval(rideInterval)
     }
   }, [params.rideId])
+
+  // Poll driver location separately (could be Firestore listener later)
+  useEffect(() => {
+    if (!ride?.driverId) return
+    // clear existing
+    if (pollingRef.current) clearInterval(pollingRef.current)
+    const poll = async () => {
+      try {
+        const driverProfile = await UserService.getUserProfile(ride.driverId!)
+        const loc: any = (driverProfile as any)?.currentLocation
+        if (loc?.latitude && loc?.longitude) {
+          setDriverLocation({
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+          })
+          if (ride.status === 'accepted' || ride.status === 'driver_arriving') {
+            const distance = LocationService.calculateDistance(
+              { latitude: loc.latitude, longitude: loc.longitude },
+              ride.pickupLocation
+            )
+            setEstimatedArrival(
+              LocationService.calculateEstimatedTime(distance)
+            )
+          }
+        }
+      } catch (e) {
+        // silent
+      }
+    }
+    poll()
+    pollingRef.current = setInterval(poll, 5000) as unknown as number
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [ride?.driverId, ride?.status])
 
   const loadRideDetails = async () => {
     if (!params.rideId) return
@@ -65,16 +101,6 @@ const RideTrackingScreen = () => {
 
   const handleDriverLocationUpdate = (location: LocationCoordinates) => {
     setDriverLocation(location)
-
-    // Update estimated arrival time
-    if (ride && ride.status === 'accepted') {
-      const distance = LocationService.calculateDistance(
-        location,
-        ride.pickupLocation
-      )
-      const eta = LocationService.calculateEstimatedTime(distance)
-      setEstimatedArrival(eta)
-    }
   }
 
   const handleCancelRide = async () => {
@@ -83,6 +109,10 @@ const RideTrackingScreen = () => {
     try {
       const success = await RideService.updateRideStatus(ride.id, 'cancelled')
       if (success) {
+        // Refresh ride state so UI disables button
+        const updatedRide = await RideService.getRide(ride.id)
+        setRide(updatedRide)
+        setShowCancelModal(false)
         Alert.alert(
           'Ride Cancelled',
           'Your ride has been cancelled successfully.',
@@ -95,7 +125,6 @@ const RideTrackingScreen = () => {
       console.error('Error cancelling ride:', error)
       Alert.alert('Error', 'Failed to cancel ride. Please try again.')
     }
-    setShowCancelModal(false)
   }
 
   const callDriver = () => {
@@ -117,19 +146,21 @@ const RideTrackingScreen = () => {
           icon: 'search-outline',
           description: "We're looking for the best driver for you",
         }
-      case 'accepted':
+      case 'accepted': {
+        const etaText = estimatedArrival > 0 ? `${estimatedArrival} min` : '—'
         return {
-          text: `Driver arriving in ${estimatedArrival} min`,
+          text: `Driver arriving in ${etaText}`,
           color: '#4CAF50',
           icon: 'car-outline',
           description: 'Your driver is on the way to pick you up',
         }
+      }
       case 'driver_arriving':
         return {
           text: 'Driver has arrived',
           color: '#2196F3',
           icon: 'location-outline',
-          description: 'Your driver is waiting at the pickup location',
+          description: 'Please meet your driver at the pickup point',
         }
       case 'in_progress':
         return {
@@ -163,7 +194,7 @@ const RideTrackingScreen = () => {
     <Modal
       visible={showCancelModal}
       animationType='slide'
-      presentationStyle='formSheet'
+      presentationStyle='fullScreen'
       transparent={true}>
       <View style={styles.modalOverlay}>
         <View style={styles.cancelModal}>
@@ -244,6 +275,14 @@ const RideTrackingScreen = () => {
           onLocationUpdate={handleDriverLocationUpdate}
           showTraffic={true}
         />
+        {/* Overlay mini controls */}
+        <View style={styles.mapOverlayControls} pointerEvents='box-none'>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={loadRideDetails}>
+            <Ionicons name='refresh' size={20} color='#007AFF' />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Ride Info Panel */}
@@ -401,6 +440,23 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     flex: 1,
+  },
+  mapOverlayControls: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'column',
+    gap: 8,
+  },
+  refreshButton: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
   rideInfoPanel: {
     backgroundColor: '#fff',
